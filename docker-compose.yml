@@ -1,0 +1,53 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: daily-tasks-tracker-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_HOST=mariadb
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=daily_tasks
+      - DATABASE_USER=daily_tasks_user
+      - DATABASE_PASSWORD=daily_tasks_password
+      - DATABASE_URL=mysql://daily_tasks_user:daily_tasks_password@mariadb:3306/daily_tasks
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - daily-tasks-network
+    restart: unless-stopped
+
+  mariadb:
+    image: mariadb:11.3
+    container_name: daily-tasks-tracker-db
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=daily_tasks
+      - MYSQL_USER=daily_tasks_user
+      - MYSQL_PASSWORD=daily_tasks_password
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - daily-tasks-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  daily-tasks-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+    driver: local
+
